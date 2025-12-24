@@ -1,0 +1,870 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Shavtsak V4 Ultimate</title>
+    
+    <link rel="manifest" href="data:application/json;base64,ewogICJuYW1lIjogIlNoYXZ0c2FrIFBybyIsCiAgInNob3J0X25hbWUiOiAiU2hhdnRzYWsiLAogICJzdGFydF91cmwiOiAiLiIsCiAgImRpc3BsYXkiOiAiYnJvd3NlciIsCiAgImJhY2tncm91bmRfY29xvciI6ICIjMGYxNzJhIiwKICAidGhlbWVfY29xvciI6ICIjMGYxNzJhIiwKICAiaWNvbnMiOiBbXQp9">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#0f172a">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;700;900&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    
+    <style>
+        :root {
+            --bg-grad: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #312e81 100%);
+            --glass-bg: rgba(15, 23, 42, 0.8);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --text-main: #e2e8f0;
+        }
+
+        body {
+            font-family: 'Heebo', sans-serif;
+            background: var(--bg-grad);
+            min-height: 100vh;
+            color: var(--text-main);
+            overflow-x: hidden;
+        }
+
+        /* UI Components */
+        .glass-panel {
+            background: var(--glass-bg);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            box-shadow: 0 4px 30px rgba(0,0,0,0.2);
+        }
+
+        .glass-input {
+            background: rgba(0,0,0,0.3);
+            border: 1px solid var(--glass-border);
+            color: white;
+            outline: none;
+            transition: 0.3s;
+        }
+        .glass-input:focus { border-color: #6366f1; background: rgba(0,0,0,0.5); }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #6366f1, #4f46e5);
+            box-shadow: 0 4px 15px rgba(99,102,241,0.4);
+            color: white;
+        }
+
+        /* Toggle Switch */
+        .toggle-checkbox:checked {
+            right: 0;
+            border-color: #68D391;
+        }
+        .toggle-checkbox:checked + .toggle-label {
+            background-color: #68D391;
+        }
+        
+        /* Modals */
+        .modal-overlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(5px);
+            display: flex; align-items: center; justify-content: center; z-index: 100;
+            opacity: 0; pointer-events: none; transition: opacity 0.3s;
+        }
+        .modal-overlay.active { opacity: 1; pointer-events: auto; }
+        .modal-content { transform: scale(0.95); transition: transform 0.3s; }
+        .modal-overlay.active .modal-content { transform: scale(1); }
+
+        /* PDF Styles (Dark Glass) */
+        #print-container {
+            position: fixed; top: 0; left: -9999px;
+            width: 297mm; min-height: 210mm;
+            background: #0f172a; /* Dark Background */
+            color: #e2e8f0;
+            padding: 10mm;
+            font-family: 'Heebo', sans-serif;
+        }
+        
+        .print-grid {
+            display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; align-items: start;
+        }
+        
+        .print-card {
+            background: rgba(30, 41, 59, 0.6); /* Semi-transparent dark */
+            border: 1px solid rgba(255,255,255,0.15);
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+        }
+
+        .print-header {
+            background: rgba(0,0,0,0.3);
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            padding: 8px 12px;
+            font-weight: 900;
+            font-size: 14pt;
+            display: flex; justify-content: space-between; align-items: center;
+            color: #fff;
+        }
+
+        .print-body { padding: 10px; }
+        
+        /* Vertical Layout for Shift Content */
+        .print-shift-block {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.05);
+            border-radius: 6px;
+            padding: 8px;
+            margin-bottom: 8px;
+        }
+        .print-shift-title {
+            font-weight: bold; color: #818cf8; font-size: 10pt; margin-bottom: 4px; border-bottom: 1px dashed rgba(255,255,255,0.1);
+        }
+        .print-shift-person {
+            font-size: 9pt; display: flex; align-items: center; gap: 5px; margin-bottom: 2px;
+        }
+        .print-shift-person i { font-size: 7pt; opacity: 0.7; }
+        
+        .fab {
+            position: fixed; bottom: 20px; left: 20px; width: 56px; height: 56px;
+            background: #6366f1; border-radius: 50%; color: white;
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.4); cursor: pointer; z-index: 50; transition: transform 0.2s;
+        }
+        .fab:hover { transform: scale(1.1); }
+
+    </style>
+</head>
+<body class="p-2 md:p-6 text-sm md:text-base">
+
+    <div class="fab" onclick="openSettings()"><i class="fa-solid fa-gear text-xl"></i></div>
+
+    <div id="modal" class="modal-overlay">
+        <div class="glass-panel modal-content w-full max-w-md p-6 bg-slate-900 relative shadow-2xl">
+            <h3 id="mTitle" class="text-xl font-bold mb-4 border-b border-gray-600 pb-2 text-white"></h3>
+            <div id="mBody" class="mb-4 text-gray-300"></div>
+            <div id="mInputBox" class="hidden mb-4"><input type="text" id="mInput" class="w-full p-3 rounded glass-input"></div>
+            <div class="flex justify-end gap-3">
+                <button id="mCancel" class="px-4 py-2 rounded text-gray-400 hover:bg-white/10">ביטול</button>
+                <button id="mOk" class="btn-primary px-6 py-2 rounded font-bold">אישור</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="settingsModal" class="modal-overlay">
+        <div class="glass-panel modal-content w-full max-w-lg p-6 bg-slate-900 relative">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold text-indigo-400">הגדרות מערכת</h2>
+                <button onclick="closeSettings()" class="text-gray-400 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
+            </div>
+
+            <div class="space-y-6">
+                <div class="bg-white/5 p-3 rounded-lg border border-white/10">
+                    <h4 class="font-bold text-orange-400 mb-2"><i class="fa-solid fa-utensils"></i> מי מבצע מטבח?</h4>
+                    <div class="grid grid-cols-2 gap-3 text-sm">
+                        <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" class="role-k" value="hayal"> לוחם</label>
+                        <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" class="role-k" value="mefaked"> מפקד</label>
+                        <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" class="role-k" value="samal"> סמל</label>
+                        <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" class="role-k" value="mm"> מ"מ</label>
+                    </div>
+                </div>
+
+                <div class="bg-white/5 p-3 rounded-lg border border-white/10">
+                    <h4 class="font-bold text-yellow-400 mb-2"><i class="fa-solid fa-broom"></i> מי מבצע רס"פ?</h4>
+                    <div class="grid grid-cols-2 gap-3 text-sm">
+                        <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" class="role-r" value="hayal"> לוחם</label>
+                        <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" class="role-r" value="mefaked"> מפקד</label>
+                        <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" class="role-r" value="samal"> סמל</label>
+                        <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" class="role-r" value="mm"> מ"מ</label>
+                    </div>
+                </div>
+
+                <div class="border-t border-gray-700 pt-4">
+                    <label class="block font-bold mb-2">גיבוי ושחזור</label>
+                    <div class="flex gap-2">
+                        <button onclick="exportData()" class="flex-1 py-2 bg-emerald-600 rounded text-white font-bold text-sm hover:bg-emerald-500">
+                            <i class="fa-solid fa-download"></i> הורד קובץ
+                        </button>
+                        <label class="flex-1 py-2 bg-blue-600 rounded text-white font-bold text-sm text-center cursor-pointer hover:bg-blue-500">
+                            <i class="fa-solid fa-upload"></i> טען קובץ
+                            <input type="file" class="hidden" onchange="importData(this)">
+                        </label>
+                    </div>
+                </div>
+                
+                <button onclick="saveSettings()" class="w-full btn-primary py-3 rounded-lg font-bold mt-2 shadow-lg">שמור שינויים</button>
+            </div>
+        </div>
+    </div>
+
+    <header class="max-w-7xl mx-auto mb-6 flex flex-col md:flex-row justify-between items-center glass-panel p-4 gap-4">
+        <div>
+            <h1 class="text-3xl font-black text-white flex items-center gap-3 tracking-tighter">
+                <i class="fa-solid fa-shield-halved text-indigo-500"></i> SHAVTSAK
+                <span class="text-xs bg-indigo-600 text-white px-2 py-0.5 rounded-full tracking-normal">ULTIMATE</span>
+            </h1>
+        </div>
+        <div class="flex bg-black/30 p-1 rounded-xl">
+            <button onclick="setTab('soldiers')" id="btn-soldiers" class="px-6 py-2 rounded-lg font-bold transition-all bg-indigo-600 text-white shadow-lg">סד"כ</button>
+            <button onclick="setTab('board')" id="btn-board" class="px-6 py-2 rounded-lg font-bold transition-all text-gray-400 hover:text-white">שיבוץ</button>
+        </div>
+    </header>
+
+    <div id="view-soldiers" class="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div class="lg:col-span-1 glass-panel p-6 h-fit">
+            <h2 class="text-xl font-bold mb-4 border-b border-gray-600 pb-2">הוספת כוח אדם</h2>
+            <form onsubmit="addSoldier(event)">
+                <input type="text" id="sName" placeholder="שם מלא" class="w-full p-3 mb-3 rounded-lg glass-input" required>
+                <select id="sRole" class="w-full p-3 mb-3 rounded-lg glass-input bg-slate-800" required>
+                    <option value="hayal">לוחם</option>
+                    <option value="mefaked">מפקד</option>
+                    <option value="samal">סמל</option>
+                    <option value="mm">מ"מ</option>
+                </select>
+                <input type="text" id="sId" placeholder="מספר אישי" class="w-full p-3 mb-4 rounded-lg glass-input" required>
+                <button type="submit" class="w-full btn-primary py-3 rounded-lg font-bold shadow-lg">הוסף לרשימה</button>
+            </form>
+            <div class="grid grid-cols-2 gap-2 mt-4">
+                <button onclick="showHistory('kitchen')" class="bg-orange-900/40 border border-orange-500/30 text-orange-200 py-2 rounded hover:bg-orange-500/20 text-xs">היסטוריית מטבח</button>
+                <button onclick="showHistory('rasap')" class="bg-yellow-900/40 border border-yellow-500/30 text-yellow-200 py-2 rounded hover:bg-yellow-500/20 text-xs">היסטוריית רס"פ</button>
+            </div>
+        </div>
+
+        <div class="lg:col-span-2 glass-panel p-6">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-bold">רשימת לוחמים (<span id="sCount">0</span>)</h2>
+                <button onclick="confirmModal('איפוס', 'למחוק את כל הנתונים?', resetAll)" class="text-xs text-red-400 underline hover:text-red-300">איפוס מלא</button>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-right border-collapse min-w-[500px]">
+                    <tbody id="sTable"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div id="view-board" class="max-w-7xl mx-auto hidden">
+        <div class="glass-panel p-4 mb-6 border border-indigo-500/30">
+            <h3 class="font-bold text-indigo-300 text-sm mb-3 uppercase tracking-wider"><i class="fa-solid fa-sliders"></i> ניהול תורנויות יומי (פעיל / כבוי + תקן)</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="bg-black/20 p-3 rounded-xl flex items-center justify-between border border-white/5">
+                    <div class="flex items-center gap-3">
+                        <div class="relative inline-block w-10 mr-2 align-middle select-none transition duration-200 ease-in">
+                            <input type="checkbox" id="togKitchen" class="toggle-checkbox absolute block w-5 h-5 rounded-full bg-white border-4 appearance-none cursor-pointer transition-all duration-300 left-0" onchange="updateDuties()">
+                            <label for="togKitchen" class="toggle-label block overflow-hidden h-5 rounded-full bg-gray-600 cursor-pointer"></label>
+                        </div>
+                        <span class="font-bold text-orange-400"><i class="fa-solid fa-utensils"></i> מטבח</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs text-gray-400">תקן:</span>
+                        <input type="number" id="qKitchen" class="w-12 p-1 text-center rounded glass-input text-sm" value="1" min="1" onchange="updateDuties()">
+                    </div>
+                </div>
+                
+                <div class="bg-black/20 p-3 rounded-xl flex items-center justify-between border border-white/5">
+                    <div class="flex items-center gap-3">
+                        <div class="relative inline-block w-10 mr-2 align-middle select-none transition duration-200 ease-in">
+                            <input type="checkbox" id="togRasap" class="toggle-checkbox absolute block w-5 h-5 rounded-full bg-white border-4 appearance-none cursor-pointer transition-all duration-300 left-0" onchange="updateDuties()">
+                            <label for="togRasap" class="toggle-label block overflow-hidden h-5 rounded-full bg-gray-600 cursor-pointer"></label>
+                        </div>
+                        <span class="font-bold text-yellow-400"><i class="fa-solid fa-broom"></i> רס"פ</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs text-gray-400">תקן:</span>
+                        <input type="number" id="qRasap" class="w-12 p-1 text-center rounded glass-input text-sm" value="1" min="1" onchange="updateDuties()">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-6">
+            <div class="lg:col-span-4 glass-panel p-5">
+                <h3 class="font-bold mb-3 border-b border-gray-600 pb-2">הוספת משימה</h3>
+                <form onsubmit="addShift(event)">
+                    <input type="text" id="shName" placeholder="שם משימה" class="w-full p-2 mb-2 rounded glass-input" required>
+                    <div class="grid grid-cols-2 gap-2 mb-2">
+                        <input type="number" id="shCount" placeholder="סבבים" class="p-2 rounded glass-input text-sm" required>
+                        <input type="number" id="shDur" placeholder="שעות" class="p-2 rounded glass-input text-sm" required>
+                    </div>
+                    <div class="bg-indigo-900/20 p-2 rounded mb-2 border border-indigo-500/20">
+                        <div class="flex gap-2">
+                            <input type="number" id="reqCmd" placeholder="מפקד" class="w-1/2 p-1 text-sm glass-input rounded text-center">
+                            <input type="number" id="reqSol" placeholder="לוחם" class="w-1/2 p-1 text-sm glass-input rounded text-center">
+                        </div>
+                    </div>
+                    <button type="submit" class="w-full btn-primary py-2 rounded font-bold text-sm">צור משימה</button>
+                </form>
+            </div>
+            <div class="lg:col-span-8 glass-panel p-5">
+                <h3 class="font-bold mb-3">משימות פעילות</h3>
+                <div id="shiftsList" class="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-[250px] overflow-y-auto"></div>
+            </div>
+        </div>
+
+        <div class="glass-panel p-4 mb-4 flex flex-wrap justify-between items-center gap-4">
+            <div>
+                <h2 class="text-2xl font-bold text-white">לוח שיבוץ</h2>
+                <p id="dateDisplay" class="text-xs text-indigo-300"></p>
+            </div>
+            <div class="flex gap-2">
+                <button onclick="confirmModal('ניקוי','לנקות שיבוצים?', clearAll)" class="px-4 py-2 border border-gray-500 rounded hover:bg-white/5">נקה</button>
+                <button onclick="autoAssign()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded font-bold shadow-lg flex gap-2 items-center"><i class="fa-solid fa-wand-magic-sparkles"></i> שיבוץ אוטומטי</button>
+                <button onclick="generatePDF()" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded font-bold border border-slate-500 flex gap-2 items-center"><i class="fa-solid fa-file-pdf"></i> PDF</button>
+            </div>
+        </div>
+
+        <div class="space-y-6 pb-20">
+            <div id="dutyBlocks" class="grid grid-cols-1 md:grid-cols-2 gap-6"></div>
+            
+            <div id="shiftBlocks" class="space-y-6"></div>
+            
+            <div class="mt-8">
+                <label class="font-bold text-xs text-indigo-300 mb-1 block">הערות / דגשים</label>
+                <textarea id="freeText" oninput="saveText()" class="w-full h-24 rounded-lg glass-input p-3" placeholder="כתוב כאן..."></textarea>
+            </div>
+        </div>
+    </div>
+
+    <div id="print-container">
+        <div style="display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 2px solid rgba(255,255,255,0.2); padding-bottom: 15px; margin-bottom: 20px;">
+            <div>
+                <h1 style="font-size: 28pt; font-weight: 900; margin: 0; color: #fff; text-shadow: 0 2px 10px rgba(0,0,0,0.5);">SHAVTSAK</h1>
+                <div id="print-date" style="font-size: 14pt; color: #94a3b8; margin-top: 5px;"></div>
+            </div>
+            <div style="text-align: left; font-size: 10pt; color: #6366f1;">ULTIMATE EDITION</div>
+        </div>
+
+        <div style="display: flex; gap: 20px; align-items: flex-start;">
+            <div style="width: 60mm; display: flex; flex-direction: column; gap: 15px;" id="print-duties-col">
+                </div>
+
+            <div class="print-grid" style="flex-grow: 1;" id="print-shifts-grid">
+                </div>
+        </div>
+
+        <div style="margin-top: 30px; background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1);">
+            <strong style="color: #818cf8; display: block; margin-bottom: 5px;">הערות / דגשים:</strong>
+            <p id="print-notes" style="white-space: pre-wrap; margin: 0; font-size: 10pt; color: #cbd5e1;"></p>
+        </div>
+    </div>
+
+    <script>
+        // --- CONSTANTS ---
+        const ROLES = {
+            'mm': { label: 'מ"מ', score: 4, badge: 'bg-yellow-500 text-black', isCmd: true },
+            'samal': { label: 'סמל', score: 3, badge: 'bg-slate-400 text-black', isCmd: true },
+            'mefaked': { label: 'מפקד', score: 2, badge: 'bg-blue-400 text-black', isCmd: true },
+            'hayal': { label: 'לוחם', score: 1, badge: 'bg-emerald-500 text-black', isCmd: false }
+        };
+        const DAYS = ['א','ב','ג','ד','ה','ו','ש'];
+
+        // --- STATE ---
+        let state = {
+            soldiers: JSON.parse(localStorage.getItem('u_soldiers')) || [],
+            shifts: JSON.parse(localStorage.getItem('u_shifts')) || [],
+            assigns: JSON.parse(localStorage.getItem('u_assigns')) || {},
+            titles: JSON.parse(localStorage.getItem('u_titles')) || {},
+            // Duties Config: { active: bool, quota: int }
+            duties: JSON.parse(localStorage.getItem('u_duties')) || {
+                kitchen: { active: true, quota: 1 },
+                rasap: { active: true, quota: 1 }
+            },
+            // Settings: Roles allowed for each duty
+            settings: JSON.parse(localStorage.getItem('u_settings')) || {
+                kitchenRoles: ['hayal'],
+                rasapRoles: ['hayal','mefaked']
+            },
+            history: JSON.parse(localStorage.getItem('u_hist')) || { kitchen: {}, rasap: {} },
+            freeText: localStorage.getItem('u_text') || ""
+        };
+
+        // --- INIT ---
+        document.addEventListener('DOMContentLoaded', () => {
+            if(!state.soldiers.length) seed();
+            
+            // Set Inputs
+            document.getElementById('freeText').value = state.freeText;
+            document.getElementById('togKitchen').checked = state.duties.kitchen.active;
+            document.getElementById('qKitchen').value = state.duties.kitchen.quota;
+            document.getElementById('togRasap').checked = state.duties.rasap.active;
+            document.getElementById('qRasap').value = state.duties.rasap.quota;
+            
+            updateDate();
+            renderAll();
+        });
+
+        function seed() {
+            state.soldiers = [
+                { id: '100', name: 'ישראל לוחם', role: 'hayal', avail: Array(7).fill(true) },
+                { id: '101', name: 'משה מפקד', role: 'mefaked', avail: Array(7).fill(true) }
+            ];
+            save();
+        }
+
+        function save() {
+            localStorage.setItem('u_soldiers', JSON.stringify(state.soldiers));
+            localStorage.setItem('u_shifts', JSON.stringify(state.shifts));
+            localStorage.setItem('u_assigns', JSON.stringify(state.assigns));
+            localStorage.setItem('u_titles', JSON.stringify(state.titles));
+            localStorage.setItem('u_duties', JSON.stringify(state.duties));
+            localStorage.setItem('u_settings', JSON.stringify(state.settings));
+            localStorage.setItem('u_hist', JSON.stringify(state.history));
+        }
+        function saveText() {
+            state.freeText = document.getElementById('freeText').value;
+            localStorage.setItem('u_text', state.freeText);
+        }
+        function updateDate() {
+            document.getElementById('dateDisplay').textContent = new Date().toLocaleDateString('he-IL', {weekday:'long',year:'numeric',month:'long',day:'numeric'});
+        }
+
+        // --- TABS ---
+        function setTab(tab) {
+            document.getElementById('view-soldiers').classList.add('hidden');
+            document.getElementById('view-board').classList.add('hidden');
+            
+            const baseBtn = "px-6 py-2 rounded-lg font-bold transition-all text-gray-400 hover:text-white";
+            const activeBtn = "px-6 py-2 rounded-lg font-bold transition-all bg-indigo-600 text-white shadow-lg";
+            
+            document.getElementById('btn-soldiers').className = baseBtn;
+            document.getElementById('btn-board').className = baseBtn;
+            
+            document.getElementById('view-'+tab).classList.remove('hidden');
+            document.getElementById('btn-'+tab).className = activeBtn;
+            
+            if(tab === 'board') renderBoard();
+        }
+
+        // --- MODALS ---
+        function confirmModal(title, text, cb) {
+            const m = document.getElementById('modal');
+            document.getElementById('mTitle').textContent = title;
+            document.getElementById('mBody').textContent = text;
+            document.getElementById('mInputBox').classList.add('hidden');
+            
+            const ok = document.getElementById('mOk');
+            const newOk = ok.cloneNode(true);
+            ok.parentNode.replaceChild(newOk, ok);
+            newOk.onclick = () => { cb(); m.classList.remove('active'); };
+            
+            document.getElementById('mCancel').onclick = () => m.classList.remove('active');
+            m.classList.add('active');
+        }
+        function promptModal(title, text, cb, val='') {
+            const m = document.getElementById('modal');
+            document.getElementById('mTitle').textContent = title;
+            document.getElementById('mBody').textContent = text;
+            const box = document.getElementById('mInputBox');
+            box.classList.remove('hidden');
+            const inp = document.getElementById('mInput');
+            inp.value = val; inp.focus();
+
+            const ok = document.getElementById('mOk');
+            const newOk = ok.cloneNode(true);
+            ok.parentNode.replaceChild(newOk, ok);
+            newOk.onclick = () => { if(inp.value) cb(inp.value); m.classList.remove('active'); };
+
+            document.getElementById('mCancel').onclick = () => m.classList.remove('active');
+            m.classList.add('active');
+        }
+        function openSettings() {
+            const m = document.getElementById('settingsModal');
+            // Load checkbox state
+            document.querySelectorAll('.role-k').forEach(c => c.checked = state.settings.kitchenRoles.includes(c.value));
+            document.querySelectorAll('.role-r').forEach(c => c.checked = state.settings.rasapRoles.includes(c.value));
+            m.classList.add('active');
+        }
+        function closeSettings() { document.getElementById('settingsModal').classList.remove('active'); }
+        function saveSettings() {
+            state.settings.kitchenRoles = Array.from(document.querySelectorAll('.role-k:checked')).map(c=>c.value);
+            state.settings.rasapRoles = Array.from(document.querySelectorAll('.role-r:checked')).map(c=>c.value);
+            save(); closeSettings();
+        }
+
+        // --- SOLDIERS ---
+        function addSoldier(e) {
+            e.preventDefault();
+            const id = document.getElementById('sId').value;
+            if(state.soldiers.find(s=>s.id===id)) { alert('קיים'); return; }
+            state.soldiers.push({
+                id: id, name: document.getElementById('sName').value, role: document.getElementById('sRole').value, avail: Array(7).fill(true)
+            });
+            save(); renderSoldiers(); e.target.reset();
+        }
+        function delSol(id) {
+            confirmModal('מחיקה', 'למחוק?', () => {
+                state.soldiers = state.soldiers.filter(s=>s.id!==id);
+                save(); renderSoldiers();
+            });
+        }
+        function toggleAvail(id, d) {
+            const s = state.soldiers.find(x=>x.id===id);
+            s.avail[d] = !s.avail[d]; save(); renderSoldiers();
+        }
+        function renderSoldiers() {
+            const tb = document.getElementById('sTable');
+            tb.innerHTML = '';
+            document.getElementById('sCount').textContent = state.soldiers.length;
+            
+            const sorted = [...state.soldiers].sort((a,b)=>ROLES[b.role].score - ROLES[a.role].score);
+            sorted.forEach(s => {
+                const r = ROLES[s.role];
+                let days = '<div class="flex justify-end gap-1">';
+                s.avail.forEach((act, i) => {
+                    days += `<div onclick="toggleAvail('${s.id}',${i})" class="w-5 h-5 rounded flex items-center justify-center text-[10px] cursor-pointer ${act?'bg-emerald-500 text-white':'bg-gray-700'}">${DAYS[i]}</div>`;
+                });
+                days += '</div>';
+                
+                tb.innerHTML += `<tr class="border-b border-gray-700 hover:bg-white/5">
+                    <td class="py-2"><span class="px-2 rounded text-xs ${r.badge}">${r.label}</span> ${s.name} <span class="text-xs text-gray-500">${s.id}</span></td>
+                    <td class="py-2">${days}</td>
+                    <td class="py-2"><button onclick="delSol('${s.id}')" class="text-red-400 p-2"><i class="fa-solid fa-trash"></i></button></td>
+                </tr>`;
+            });
+        }
+        function showHistory(type) {
+            const hist = state.history[type] || {};
+            let html = '<ul class="max-h-60 overflow-y-auto space-y-2 text-sm">';
+            state.soldiers.forEach(s => {
+                const d = hist[s.id] ? new Date(hist[s.id]).toLocaleDateString() : 'טרם ביצע';
+                html += `<li class="flex justify-between border-b border-gray-700 pb-1"><span>${s.name}</span> <span class="text-indigo-300">${d}</span></li>`;
+            });
+            html += '</ul>';
+            confirmModal('היסטוריה: ' + (type==='kitchen'?'מטבח':'רס"פ'), '', ()=>{}); // Dummy confirm as alert
+            document.getElementById('mBody').innerHTML = html; // Inject HTML
+        }
+
+        // --- BOARD ---
+        function updateDuties() {
+            state.duties.kitchen.active = document.getElementById('togKitchen').checked;
+            state.duties.kitchen.quota = parseInt(document.getElementById('qKitchen').value)||1;
+            state.duties.rasap.active = document.getElementById('togRasap').checked;
+            state.duties.rasap.quota = parseInt(document.getElementById('qRasap').value)||1;
+            save(); renderBoard();
+        }
+        function addShift(e) {
+            e.preventDefault();
+            state.shifts.push({
+                id: 'sh_'+Date.now(),
+                name: document.getElementById('shName').value,
+                count: parseInt(document.getElementById('shCount').value),
+                dur: parseInt(document.getElementById('shDur').value),
+                reqCmd: parseInt(document.getElementById('reqCmd').value)||0,
+                reqSol: parseInt(document.getElementById('reqSol').value)||0
+            });
+            save(); renderShiftsList(); renderBoard(); e.target.reset();
+        }
+        function delShift(id) {
+            confirmModal('מחיקה','למחוק משימה?',()=>{
+                state.shifts = state.shifts.filter(x=>x.id!==id);
+                save(); renderShiftsList(); renderBoard();
+            });
+        }
+        function renderShiftsList() {
+            const div = document.getElementById('shiftsList');
+            div.innerHTML = '';
+            state.shifts.forEach(sh => {
+                div.innerHTML += `<div class="bg-white/5 border border-white/10 p-2 rounded flex justify-between items-center">
+                    <div><b>${sh.name}</b> <span class="text-xs text-gray-400">${sh.count} סבבים</span></div>
+                    <button onclick="delShift('${sh.id}')" class="text-red-400"><i class="fa-solid fa-trash"></i></button>
+                </div>`;
+            });
+        }
+
+        function renderBoard() {
+            // Render Duties
+            const dDiv = document.getElementById('dutyBlocks');
+            dDiv.innerHTML = '';
+            
+            // Helper to render a duty block
+            const renderDuty = (key, name, icon, colorClass, borderClass, bgClass) => {
+                if(!state.duties[key].active) return;
+                const quota = state.duties[key].quota;
+                const assigned = state.assigns[key+'_today'] || [];
+                
+                let html = `<div class="glass-panel p-4 border-r-4 ${borderClass} ${bgClass} relative">
+                    <div class="flex justify-between items-center mb-3 ${colorClass} font-bold border-b border-white/10 pb-2">
+                        <h3>${icon} ${name}</h3>
+                        <span class="text-xs border rounded px-1 opacity-80">תקן: ${quota}</span>
+                    </div>
+                    <div class="space-y-2">`;
+                
+                // Slots
+                for(let i=0; i<quota; i++) {
+                    if(assigned[i]) {
+                        const s = state.soldiers.find(x=>x.id===assigned[i]);
+                        if(s) {
+                            html += `<div class="bg-black/20 p-2 rounded flex justify-between items-center text-white">
+                                <span>${s.name}</span>
+                                <button onclick="remAssign('${key}_today','${s.id}')" class="text-red-400"><i class="fa-solid fa-xmark"></i></button>
+                            </div>`;
+                        }
+                    } else {
+                        html += `<button onclick="manAssign('${key}_today', '${key}')" class="w-full py-2 border border-dashed border-gray-500 rounded text-xs text-gray-400 hover:text-white hover:border-white">+ הוסף תורן</button>`;
+                    }
+                }
+                html += `</div></div>`;
+                dDiv.innerHTML += html;
+            };
+
+            renderDuty('kitchen', 'מטבח', '<i class="fa-solid fa-utensils"></i>', 'text-orange-400', 'border-orange-500', 'bg-orange-900/10');
+            renderDuty('rasap', 'רס"פ', '<i class="fa-solid fa-broom"></i>', 'text-yellow-400', 'border-yellow-500', 'bg-yellow-900/10');
+
+            // Render Shifts
+            const sDiv = document.getElementById('shiftBlocks');
+            sDiv.innerHTML = '';
+            state.shifts.forEach(sh => {
+                let html = `<div class="glass-panel p-4 border-r-4 border-indigo-500">
+                    <div class="flex justify-between mb-4 border-b border-white/10 pb-2">
+                        <h3 class="font-bold text-lg">${sh.name}</h3>
+                        <div class="text-xs flex gap-2 self-center">
+                            <span class="bg-blue-900/40 px-2 rounded text-blue-200">מ: ${sh.reqCmd}</span>
+                            <span class="bg-emerald-900/40 px-2 rounded text-emerald-200">ל: ${sh.reqSol}</span>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">`;
+                
+                for(let i=1; i<=sh.count; i++) {
+                    const key = `${sh.id}_r${i}`;
+                    const title = state.titles[key] || `סבב ${i}`;
+                    const assigned = state.assigns[key] || [];
+                    
+                    html += `<div class="bg-black/20 rounded-lg p-3 border border-white/5 flex flex-col min-h-[120px]">
+                        <div class="flex justify-between items-center mb-2 text-indigo-300 text-sm font-bold">
+                            <span onclick="editTitle('${key}','${title}')" class="cursor-pointer hover:text-white border-b border-dashed border-gray-600">${title}</span>
+                            <i onclick="manAssign('${key}')" class="fa-solid fa-plus cursor-pointer hover:text-white"></i>
+                        </div>
+                        <div class="space-y-1 flex-1">`;
+                    
+                    if(!assigned.length) html += `<div class="text-[10px] text-center opacity-30 mt-4">ריק</div>`;
+                    
+                    // Sort assigned by rank
+                    const folks = assigned.map(id=>state.soldiers.find(x=>x.id===id)).filter(x=>x).sort((a,b)=>ROLES[b.role].score - ROLES[a.role].score);
+                    
+                    folks.forEach(s => {
+                        html += `<div class="flex justify-between items-center bg-white/5 p-1.5 rounded text-xs group">
+                            <div class="flex items-center gap-2">
+                                <span class="w-2 h-2 rounded-full ${ROLES[s.role].badge}"></span>
+                                <span>${s.name}</span>
+                            </div>
+                            <i onclick="remAssign('${key}','${s.id}')" class="fa-solid fa-xmark text-red-400 opacity-0 group-hover:opacity-100 cursor-pointer"></i>
+                        </div>`;
+                    });
+                    
+                    html += `</div></div>`;
+                }
+                html += `</div></div>`;
+                sDiv.innerHTML += html;
+            });
+        }
+
+        // --- ASSIGN LOGIC ---
+        function manAssign(key, dutyType=null) {
+            promptModal('הוספה ידנית', 'מספר אישי:', (id) => {
+                const s = state.soldiers.find(x=>x.id===id);
+                if(!s) { alert('לא נמצא'); return; }
+                
+                if(!state.assigns[key]) state.assigns[key] = [];
+                if(!state.assigns[key].includes(id)) {
+                    state.assigns[key].push(id);
+                    // Update history if it's a duty
+                    if(dutyType) state.history[dutyType][id] = Date.now();
+                    save(); renderBoard();
+                }
+            });
+        }
+        function remAssign(key, id) {
+            state.assigns[key] = state.assigns[key].filter(x=>x!==id);
+            save(); renderBoard();
+        }
+        function editTitle(key, old) {
+            promptModal('כותרת', 'שנה שם:', (val)=>{
+                state.titles[key] = val; save(); renderBoard();
+            }, old);
+        }
+        function clearAll() { state.assigns = {}; save(); renderBoard(); }
+        function resetAll() { localStorage.clear(); location.reload(); }
+
+        // --- AUTO ASSIGN ---
+        function autoAssign() {
+            state.assigns = {};
+            const d = new Date().getDay();
+            let pool = state.soldiers.filter(s => s.avail[d]);
+
+            if(!pool.length) { alert('אין חיילים זמינים'); return; }
+
+            // 1. Assign Duties
+            ['kitchen', 'rasap'].forEach(dtype => {
+                if(state.duties[dtype].active) {
+                    const quota = state.duties[dtype].quota;
+                    const allowed = state.settings[dtype+'Roles']; // kitchenRoles or rasapRoles
+                    
+                    // Filter pool based on allowed roles
+                    let candidates = pool.filter(s => allowed.includes(s.role));
+                    
+                    // Sort by history (ascending timestamp)
+                    candidates.sort((a,b) => (state.history[dtype][a.id]||0) - (state.history[dtype][b.id]||0));
+                    
+                    // Pick top candidates
+                    for(let i=0; i<quota; i++) {
+                        if(candidates.length) {
+                            const pick = candidates.shift();
+                            // Add to assigns
+                            const key = dtype+'_today';
+                            if(!state.assigns[key]) state.assigns[key] = [];
+                            state.assigns[key].push(pick.id);
+                            
+                            // Update History
+                            state.history[dtype][pick.id] = Date.now();
+                            
+                            // Remove from main pool
+                            pool = pool.filter(p => p.id !== pick.id);
+                        }
+                    }
+                }
+            });
+
+            // 2. Assign Shifts
+            let cmds = pool.filter(s => ROLES[s.role].isCmd);
+            let sols = pool.filter(s => !ROLES[s.role].isCmd);
+
+            state.shifts.forEach(sh => {
+                for(let i=1; i<=sh.count; i++) {
+                    const key = `${sh.id}_r${i}`;
+                    state.assigns[key] = [];
+                    // Fill Cmd
+                    for(let c=0; c<sh.reqCmd; c++) {
+                        if(cmds.length) state.assigns[key].push(cmds.shift().id);
+                        else if(sols.length) state.assigns[key].push(sols.shift().id);
+                    }
+                    // Fill Sols
+                    for(let s=0; s<sh.reqSol; s++) {
+                        if(sols.length) state.assigns[key].push(sols.shift().id);
+                        else if(cmds.length) state.assigns[key].push(cmds.shift().id);
+                    }
+                }
+            });
+
+            // 3. Leftovers
+            const leftovers = [...cmds, ...sols];
+            const keys = Object.keys(state.assigns).filter(k => !k.includes('today')); // Don't dump into duties
+            let kIdx = 0;
+            while(leftovers.length && keys.length) {
+                state.assigns[keys[kIdx%keys.length]].push(leftovers.shift().id);
+                kIdx++;
+            }
+
+            save(); renderBoard();
+        }
+
+        // --- PDF GEN (Dark Glass + Vertical Layout) ---
+        async function generatePDF() {
+            const container = document.getElementById('print-container');
+            const dCol = document.getElementById('print-duties-col');
+            const sGrid = document.getElementById('print-shifts-grid');
+
+            // Set Date/Notes
+            document.getElementById('print-date').innerText = new Date().toLocaleDateString('he-IL');
+            document.getElementById('print-notes').innerText = state.freeText;
+
+            // Render Duties Column
+            dCol.innerHTML = '';
+            ['kitchen', 'rasap'].forEach(dtype => {
+                if(state.duties[dtype].active) {
+                    const key = dtype+'_today';
+                    const assigned = state.assigns[key] || [];
+                    const names = assigned.map(id => {
+                        const s = state.soldiers.find(x=>x.id===id);
+                        return s ? s.name : '-';
+                    }).join(', ');
+                    
+                    const title = dtype === 'kitchen' ? 'מטבח' : 'רס"פ';
+                    const color = dtype === 'kitchen' ? '#f97316' : '#facc15'; // Orange / Yellow
+
+                    dCol.innerHTML += `
+                        <div class="print-card" style="border-color: ${color}; box-shadow: 0 0 15px ${color}20;">
+                            <div class="print-header" style="color: ${color}; border-color: ${color}40;">${title}</div>
+                            <div class="print-body" style="text-align:center; font-size:12pt; font-weight:bold;">${names || 'אין'}</div>
+                        </div>
+                    `;
+                }
+            });
+
+            // Render Shifts Grid
+            sGrid.innerHTML = '';
+            state.shifts.forEach(sh => {
+                const card = document.createElement('div');
+                card.className = 'print-card';
+                
+                let inner = `<div class="print-header">${sh.name} <span style="font-size:10pt; font-weight:normal; opacity:0.7;">${sh.reqCmd}/${sh.reqSol}</span></div><div class="print-body">`;
+                
+                for(let i=1; i<=sh.count; i++) {
+                    const key = `${sh.id}_r${i}`;
+                    const title = state.titles[key] || `סבב ${i}`;
+                    const assigned = state.assigns[key] || [];
+                    
+                    // Organize by rank for vertical layout
+                    const people = assigned.map(id=>state.soldiers.find(x=>x.id===id)).filter(x=>x);
+                    const cmdList = people.filter(p => ROLES[p.role].isCmd);
+                    const solList = people.filter(p => !ROLES[p.role].isCmd);
+                    
+                    inner += `<div class="print-shift-block">
+                        <div class="print-shift-title">${title}</div>`;
+                    
+                    // Commanders Line
+                    if(cmdList.length) {
+                        inner += cmdList.map(p => `<div class="print-shift-person" style="color:#93c5fd;"><i class="fa-solid fa-star"></i> ${p.name}</div>`).join('');
+                    }
+                    // Soldiers Line
+                    if(solList.length) {
+                        inner += solList.map(p => `<div class="print-shift-person" style="color:#d1d5db;"><i class="fa-solid fa-user"></i> ${p.name}</div>`).join('');
+                    }
+                    if(!cmdList.length && !solList.length) inner += `<div style="font-size:8pt; opacity:0.3;">ריק</div>`;
+                    
+                    inner += `</div>`;
+                }
+                inner += `</div>`;
+                card.innerHTML = inner;
+                sGrid.appendChild(card);
+            });
+
+            // Generate
+            container.style.left = '0'; // Bring to view for canvas
+            try {
+                // Wait for styles
+                await new Promise(r => setTimeout(r, 100));
+                
+                const canvas = await html2canvas(container, {
+                    scale: 2, 
+                    backgroundColor: '#0f172a', // Ensure dark bg in image
+                    useCORS: true
+                });
+                const img = canvas.toDataURL('image/png');
+                const pdf = new jspdf.jsPDF({orientation: 'l', unit: 'mm', format: 'a4'});
+                pdf.addImage(img, 'PNG', 0, 0, 297, 210);
+                pdf.save('Shavtsak_Ultimate.pdf');
+            } catch(e) { alert('שגיאה ב-PDF'); console.error(e); }
+            container.style.left = '-9999px';
+        }
+
+        // Helper render all
+        function renderAll() { renderSoldiers(); renderShiftsList(); renderBoard(); }
+        // Export/Import
+        function exportData() {
+            const s = JSON.stringify(state);
+            const b = new Blob([s],{type:'application/json'});
+            const u = URL.createObjectURL(b);
+            const a = document.createElement('a'); a.href=u; a.download='shavtsak_backup.json'; a.click();
+        }
+        function importData(inp) {
+            const f = inp.files[0];
+            if(!f) return;
+            const r = new FileReader();
+            r.onload = e => {
+                try { state = JSON.parse(e.target.result); save(); location.reload(); }
+                catch(err){ alert('קובץ שגוי'); }
+            };
+            r.readAsText(f);
+        }
+    </script>
+</body>
+</html>
